@@ -66,7 +66,13 @@ input[type=checkbox]{padding:0}
 .fc .ag{font-size:12px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc .nx{font-weight:700;margin-top:4px;font-size:14px}.fc .nx em{color:var(--red);font-style:normal}
 /* 목록 */
-.two{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+.ov{position:fixed;inset:0;background:rgba(6,14,16,.5);display:flex;justify-content:center;align-items:center;padding:16px;z-index:40}
+.dlg{background:#fff;border-radius:14px;width:min(600px,100%);max-height:92vh;overflow:auto;padding:20px;position:relative}
+.xbtn{position:absolute;right:12px;top:10px;border:1px solid var(--ln);background:#fff;border-radius:6px;padding:2px 9px;font:inherit;cursor:pointer}
+#side h3{margin:0;font-size:22px}
+.nb{margin-left:6px;white-space:nowrap}
+#plist th,#plist td{padding:6px 7px}
+.wrap{max-width:1700px!important}
 @media(max-width:1000px){.two{grid-template-columns:1fr}}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
@@ -155,10 +161,7 @@ tr.pr{cursor:pointer}tr.pr:hover td,tr.pr.sel td{background:#fbf3f2}
       <input id="q" placeholder="이름·대리점·코드 입력" style="width:240px">
       <span class="mu" id="cnt" style="margin-left:auto"></span><button type="button" class="sbtn" data-img="copy" data-t="plcard" data-n="list">📋 목록 이미지 복사</button><button type="button" class="sbtn" data-img="save" data-t="plcard" data-n="list">🖼 목록 이미지 저장</button>
     </div>
-    <div class="two">
-      <div class="card tw" style="padding:0" id="plcard"><div id="plist"></div></div>
-      <div class="side"><div class="card" id="side"><div class="empty">목록에서 사용인을 선택하면 상세가 표시됩니다</div></div><div class="card" id="cnote" hidden></div></div>
-    </div>
+    <div class="card tw" style="padding:0" id="plcard"><div id="plist"></div></div>
   </section>
 
   <div class="card opts">
@@ -170,6 +173,8 @@ tr.pr{cursor:pointer}tr.pr:hover td,tr.pr.sel td{background:#fbf3f2}
   </div>
 </div>
 
+<div class="ov" id="ovD" hidden><div class="dlg" id="side"></div></div>
+<div class="ov" id="ovN" hidden><div class="dlg" id="cnote"></div></div>
 <script>
 const SUPA_URL="https://usxzzgkewedyxrkkzudc.supabase.co";
 const SUPA_KEY="sb_publishable_t_h3yZy5I8_k6UK3qaLIeA_V9CU1-E2";
@@ -184,7 +189,7 @@ const man=n=>(Math.round(n/1000)/10).toLocaleString("ko-KR")+"만원";
 const bnum=b=>parseInt((b||"").replace(/\D/g,""))||0;
 const bshort=b=>bnum(b)+"지점";
 let sb,me="",targets=[],perf=new Map(),meta=null,cmap=new Map(),contracts=new Map(),cmeta=null,hist=new Map(),hmeta=null,hym="";
-let noteKey=null,notesCur=[],noteMgr=null,tab="b",center="전체",branch="전체",fil="all",selB="전체",selM="전체",selCode=null;
+let noteSel=null,noteKey=null,notesCur=[],noteMgr=null,tab="b",center="전체",branch="전체",fil="all",selB="전체",selM="전체",selCode=null;
 let TH={"케어메이트":100000,"10만 이상":100000,"20만 이상":200000},DEDUPE=false,loaded=false;
 try{const s=JSON.parse(localStorage.getItem("goal.opts2")||"null");if(s){TH=s.TH||TH;DEDUPE=!!s.DEDUPE}}catch(e){}
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2500)}
@@ -255,7 +260,7 @@ function renderB(all,brs){
     const B=byB.get(bk),sub=blank();let n=0;B.m.forEach(l=>l.forEach(p=>{addTo(sub,p);n++}));
     const rows=[...B.m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"ko")).map(([mg,l])=>{
       const c=blank();l.forEach(p=>addTo(c,p));
-      return `<div class="mrow" data-m="${esc(bk+"|"+mg)}"><div class="nm"><b>${esc(mg)}</b><div>${l.length}명${center==="전체"&&l[0].center!=="미지정"?" · "+esc(l[0].center):""}</div><div>가계약 ${f0(l.reduce((s,p)=>s+p.cc,0))}건</div></div>${TIERS.map(t=>cellHtml(c[t])).join("")}</div>`}).join("");
+      return `<div class="mrow" data-m="${esc(bk+"|"+mg)}"><div class="nm"><b>${esc(mg)}</b>${nbtn(l[0])}<div>${l.length}명${center==="전체"&&l[0].center!=="미지정"?" · "+esc(l[0].center):""}</div><div>가계약 ${f0(l.reduce((s,p)=>s+p.cc,0))}건</div></div>${TIERS.map(t=>cellHtml(c[t])).join("")}</div>`}).join("");
     return `<div class="card bc" id="bc-${bnum(bk)}"><div class="hd2"><h3>${bshort(bk)} <span class="mu">지점장 ${esc(B.head)}</span></h3><span class="mu">대상 ${n}명</span><span data-html2canvas-ignore style="display:flex;gap:6px"><button type="button" class="sbtn" data-img="copy" data-t="bc-${bnum(bk)}" data-n="${bshort(bk)}_매니저현황">📋 이미지 복사</button><button type="button" class="sbtn" data-img="save" data-t="bc-${bnum(bk)}" data-n="${bshort(bk)}_매니저현황">🖼 이미지 저장</button></span></div>
       <div class="mrow th"><div>매니저</div><div>케어메이트</div><div>10만 이상</div><div>20만 이상</div></div>${rows}
       <div class="mrow tot"><div>지점 합계</div>${TIERS.map(t=>cellHtml(sub[t])).join("")}</div></div>`}).join("")||`<div class="card empty" style="grid-column:1/-1">조건에 맞는 자료가 없습니다.</div>`;
@@ -279,14 +284,15 @@ function renderP(all,brs){
   const fo=sc.filter(p=>!p.allHit&&p.perf>0).sort((a,b)=>a.remain-b.remain).slice(0,5);
   $("#focus").innerHTML=`<h2>오늘 챙길 ${fo.length}명<small>달성까지 적게 남은 순 · 실적이 있는 미달 사용인</small></h2>`+(fo.length?`<div class="fgrid">${fo.map((p,i)=>`<div class="fc" data-p="${esc(p.code)}"><span class="rk">${i+1}</span><b>${esc(p.name)}</b><div class="ag">${esc(p.agency)}</div><div class="nx"><em>${man(p.remain)}</em> 더 → ${p.next}</div><div class="mu">${esc(p.mgr)} · 현재 ${man(p.perf)}</div></div>`).join("")}</div>`:`<div class="mu">대상이 없습니다.</div>`);
   $("#cnt").textContent=`${list.length}명`;
+  const curM=hym?+String(hym).slice(4,6):new Date().getMonth()+1;
   const wk=[0,1,2,3,4].filter(i=>all.some(p=>p.w[i]>0));   // 실적이 있는 주차만 열로 표시
-  $("#plist").innerHTML=`<div style="padding:12px 16px;border-bottom:1px solid var(--ln)"><b style="font-size:17px">${esc(selM==="전체"?"사용인 목록":selM+" 매니저 사용인 목록")}</b> <span class="mu">${[center!=="전체"?center+" 센터장":"",branch!=="전체"?bshort(branch):"",FIL.find(x=>x[0]===fil)[1]].filter(Boolean).join(" · ")} · ${list.length}명</span>${wk.length?"":` <span class="tag no">주차별 실적 자료 없음 — 엑셀 다시 올리기 필요</span>`}</div>`+(list.length?`<table><thead><tr><th>매니저</th><th>대리점(지사)</th><th>사용인</th><th>목표 구간</th>${hist.size?`<th class="n">${hl(2)}월<br>실적</th><th class="n">${hl(1)}월<br>실적</th>`:""}${wk.map(i=>`<th class="n">${i+1}주차</th>`).join("")}<th class="n">실적 합계</th><th class="n">가계약<br>건수</th><th class="n">남은 금액</th><th>달성</th></tr></thead><tbody>${list.slice(0,400).map(p=>`<tr class="pr ${selCode===p.code?"sel":""}" data-p="${esc(p.code)}"><td>${esc(p.mgr)}</td><td>${esc(p.agency)}</td><td><b>${esc(p.name)}</b></td><td>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</td>${hist.size?`<td class="n">${won(p.h2)}</td><td class="n">${won(p.h1)}</td>`:""}${wk.map(i=>`<td class="n">${won(p.w[i])}</td>`).join("")}<td class="n"><b>${p.perf?won(p.perf)+"원":"0원"}</b></td><td class="n"><b>${p.cc}</b></td><td class="n">${p.allHit?"-":man(p.remain)}</td><td>${p.eff.map(e=>p.hit[e]?`<span class="tag ok2">${e} ✓</span>`:"").join("")||`<span class="tag no">미달</span>`}</td></tr>`).join("")}</tbody></table>${list.length>400?`<div class="empty">상위 400명만 표시했습니다. 조건을 좁혀 주세요.</div>`:""}`:`<div class="empty">조건에 맞는 사용인이 없습니다.</div>`);
+  $("#plist").innerHTML=`<div style="padding:12px 16px;border-bottom:1px solid var(--ln)"><b style="font-size:17px">${esc(selM==="전체"?"사용인 목록":selM+" 매니저 사용인 목록")}</b>${selM!=="전체"&&list[0]?nbtn(list[0],"📝 코칭노트"):""} <span class="mu">${[center!=="전체"?center+" 센터장":"",branch!=="전체"?bshort(branch):"",FIL.find(x=>x[0]===fil)[1]].filter(Boolean).join(" · ")} · ${list.length}명</span>${wk.length?"":` <span class="tag no">주차별 실적 자료 없음 — 엑셀 다시 올리기 필요</span>`}</div>`+(list.length?`<table><thead><tr><th>매니저</th><th>대리점(지사)</th><th>사용인</th><th>목표 구간</th><th class="n">가계약<br>건수</th>${hist.size?`<th class="n">${hl(2)}월<br>실적</th><th class="n">${hl(1)}월<br>실적</th>`:""}${wk.map(i=>`<th class="n">${curM}월<br>${i+1}주차</th>`).join("")}<th class="n">${curM}월<br>실적합계</th><th class="n">남은 금액</th><th>달성</th></tr></thead><tbody>${list.slice(0,400).map(p=>`<tr class="pr ${selCode===p.code?"sel":""}" data-p="${esc(p.code)}"><td>${esc(p.mgr)}${nbtn(p)}</td><td>${esc(p.agency)}</td><td><b>${esc(p.name)}</b></td><td>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</td><td class="n"><b>${p.cc}</b></td>${hist.size?`<td class="n">${won(p.h2)}</td><td class="n">${won(p.h1)}</td>`:""}${wk.map(i=>`<td class="n">${won(p.w[i])}</td>`).join("")}<td class="n"><b>${p.perf?won(p.perf)+"원":"0원"}</b></td><td class="n">${p.allHit?"-":man(p.remain)}</td><td>${p.eff.map(e=>p.hit[e]?`<span class="tag ok2">${e} ✓</span>`:"").join("")||`<span class="tag no">미달</span>`}</td></tr>`).join("")}</tbody></table>${list.length>400?`<div class="empty">상위 400명만 표시했습니다. 조건을 좁혀 주세요.</div>`:""}`:`<div class="empty">조건에 맞는 사용인이 없습니다.</div>`);
   const p=selCode&&all.find(x=>x.code===selCode);
-  $("#side").innerHTML=p?`<h3>${esc(p.name)}</h3><div class="mu">${esc(p.agency)}</div>
+  $("#side").innerHTML=p?`<button class="xbtn" data-close="D" type="button">✕</button><h3>${esc(p.name)}</h3><div class="mu">${esc(p.agency)}</div>
     <div class="kv"><span>코드</span><span>${esc(p.code)}</span><span>지점</span><span>${bshort(p.branch)} · 지점장 ${esc(p.head)}</span><span>매니저</span><span>${esc(p.mgr)}${p.center!=="미지정"?" ("+esc(p.center)+" 센터장)":""}</span><span>목표 구간</span><span>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</span>${hist.size?`<span>${hl(2)}월 실적</span><span><b>${won(p.h2)}원</b></span><span>${hl(1)}월 실적</span><span><b>${won(p.h1)}원</b></span>`:""}<span>주차별 실적</span><span>${wk.map(i=>`${i+1}주차 ${won(p.w[i])}원`).join("<br>")||"<span class=\"mu\">저장된 주차별 자료 없음<br>(goal-weeks.sql 실행 후 엑셀을 다시 올리면 표시됩니다)</span>"}</span><span>실적 합계</span><span><b>${won(p.perf)}원</b> (${p.cnt}건)</span><span>가계약 건수</span><span><b>${p.cc}건</b>${p.cc?`<br><span class="mu">설계중 ${p.cs[0]} · 심사중 ${p.cs[1]} · 심사완료 ${p.cs[2]} · 계약체결 ${p.cs[3]}</span>`:""}</span></div>
     ${p.eff.map(e=>{const pc=Math.min(100,Math.round(p.perf/TH[e]*100));return `<div style="margin-top:10px"><b>${e}</b> <span class="mu">기준 ${won(TH[e])}원</span> ${p.hit[e]?`<span class="ok">✓ 달성</span>`:`<span class="tag no">${man(TH[e]-p.perf)} 남음</span>`}<div class="bar ${p.hit[e]?"g":""}"><i style="width:${pc}%"></i></div></div>`}).join("")}`
-    :`<div class="empty">목록에서 사용인을 선택하면 상세가 표시됩니다</div>`;
-  mgrNote(base);
+    :"";
+  $("#ovD").hidden=!p;
 }
 
 /* ---- 매니저 코칭노트 (매니저코칭노트와 같은 저장소 coach_notes 사용) ---- */
@@ -301,19 +307,22 @@ function histHtml(){
   const el=$("#nhist");if(!el)return;
   el.innerHTML=notesCur.length?notesCur.map(n=>`<div class="it"><div class="mt"><b style="color:var(--ink)">${n.note_date}</b><span>${esc(n.method)}</span><span>작성자 <b style="color:var(--ink)">${esc(n.written_by||"미상")}</b></span>${n.written_by===me?`<button type="button" class="sbtn" data-ne="${n.id}">수정</button><button type="button" class="sbtn d" data-nx="${n.id}">삭제</button>`:""}</div><p>${esc(n.note)}</p></div>`).join(""):`<div class="mu">아직 기록이 없습니다.</div>`;
 }
-function mgrNote(base){
-  const box=$("#cnote");
-  if(NOCOACH.includes(me)){box.hidden=true;noteKey=null;return}
-  if(selM==="전체"){box.hidden=true;noteKey=null;return}
-  const p=base.find(x=>x.mgr===selM);if(!p){box.hidden=true;noteKey=null;return}
+const nbtn=(p,label)=>NOCOACH.includes(me)?"":`<button type="button" class="sbtn nb" data-nm="${esc(p.mgr)}" data-nb="${esc(p.branch)}" title="${esc(p.mgr)} 매니저 코칭노트">${label||"📝"}</button>`;
+function openNote(mgr,br){noteSel={mgr,branch:br};noteKey=null;mgrNote(people())}
+function closeNote(){noteSel=null;noteKey=null;$("#ovN").hidden=true}
+function mgrNote(all){
+  const box=$("#cnote"),ov=$("#ovN");
+  if(NOCOACH.includes(me)||!noteSel){ov.hidden=true;noteKey=null;return}
+  const p=all.find(x=>x.mgr===noteSel.mgr&&x.branch===noteSel.branch);if(!p){ov.hidden=true;noteKey=null;return}
+  const selM=p.mgr;
   const key=bnum(p.branch)+"|"+selM;
-  box.hidden=false;
+  ov.hidden=false;
   if(noteKey===key)return;           // 입력 중인 내용이 지워지지 않도록 같은 매니저면 다시 그리지 않음
   noteKey=key;
   const cm=coachBr.get(key);
   noteMgr={code:cm?cm.code:"g"+key,name:selM,branch:cm?cm.branch:bshort(p.branch).replace("지점","")?("충청GA-"+bnum(p.branch)+"지점"):p.branch,center:p.center==="미지정"?"":p.center};
   notesCur=[];editNote=null;
-  box.innerHTML=`<h3 style="margin:0;font-size:18px">📝 ${esc(selM)} 매니저 코칭노트</h3><div class="mu" style="margin-bottom:8px">${bshort(p.branch)}${p.center!=="미지정"?" · "+esc(p.center)+" 센터장":""}</div>
+  box.innerHTML=`<button class="xbtn" data-close="N" type="button">✕</button><h3 style="margin:0;font-size:18px">📝 ${esc(selM)} 매니저 코칭노트</h3><div class="mu" style="margin-bottom:8px">${bshort(p.branch)}${p.center!=="미지정"?" · "+esc(p.center)+" 센터장":""}</div>
    <form class="nf" id="nf" novalidate><div class="r2"><label>일자<input type="date" id="nDate" value="${today()}"></label><label>방식<select id="nMethod"><option>대면</option><option>유선</option></select></label></div>
    <label>작성자<input id="nBy" readonly value="${esc(me)}" style="background:#f3f2ef"></label>
    <label>코칭내용<textarea id="nNote" placeholder="코칭한 내용을 적어 주세요."></textarea></label>
@@ -546,6 +555,9 @@ async function upload(file){
 }
 
 document.addEventListener("click",e=>{
+  const nb=e.target.closest("[data-nm]");if(nb){openNote(nb.dataset.nm,nb.dataset.nb);return}
+  const xc=e.target.closest("[data-close]");if(xc){if(xc.dataset.close==="N")closeNote();else{selCode=null;$("#ovD").hidden=true;render()}return}
+  if(e.target.classList&&e.target.classList.contains("ov")){if(e.target.id==="ovN")closeNote();else{selCode=null;$("#ovD").hidden=true;render()}return}
   const t=e.target.closest(".tab");if(t){tab=t.dataset.tab;render();return}
   const c=e.target.closest("[data-c]");if(c){center=c.dataset.c;branch="전체";selM="전체";render();return}
   const b=e.target.closest("[data-b]");if(b){branch=b.dataset.b;render();return}
@@ -556,6 +568,7 @@ document.addEventListener("click",e=>{
 $("#selB").onchange=e=>{branch=e.target.value;selM="전체";render()};
 $("#selM").onchange=e=>{selM=e.target.value;render()};
 $("#q").oninput=render;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("#ovN").hidden)closeNote();else if(!$("#ovD").hidden){selCode=null;$("#ovD").hidden=true;render()}}});
 $("#upBtn").onclick=()=>$("#xf").click();
 $("#xf").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)upload(f)};
 const saveOpts=()=>{try{localStorage.setItem("goal.opts2",JSON.stringify({TH,DEDUPE}))}catch(e){}};
