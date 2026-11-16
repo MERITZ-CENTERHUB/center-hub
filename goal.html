@@ -46,7 +46,7 @@ input[type=checkbox]{padding:0}
 @media(max-width:480px){.bgrid{grid-template-columns:1fr}}
 .bc h3{margin:0;font-size:18px}
 .bc .hd2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.mrow{display:grid;grid-template-columns:96px repeat(3,1fr);gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--ln);cursor:pointer}
+.mrow{display:grid;grid-template-columns:104px repeat(3,1fr);gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--ln);cursor:pointer}
 .mrow:hover{background:#faf9f7}
 .mrow.th{border-top:0;cursor:default;font-size:12px;color:var(--mu);font-weight:700;padding:2px 0}
 .mrow.th:hover{background:none}
@@ -128,7 +128,7 @@ tr.pr{cursor:pointer}tr.pr:hover td,tr.pr.sel td{background:#fbf3f2}
   <div class="acts">
     <a class="hbtn" href="index.html">← 센터장 업무허브</a>
     <input type="file" id="xf" accept=".xlsx,.xls,.xlsm" hidden>
-    <button class="hbtn p" id="upBtn" type="button">📥 엑셀 올리기</button>
+    <button class="hbtn p" id="upBtn" type="button">📥 엑셀 올리기</button><input type="file" id="xf2" accept=".xlsx,.xls,.xlsm" hidden><button class="hbtn" id="upBtn2" type="button" title="가계약 리스트 엑셀(조직코드 기준)">📥 가계약 리스트 올리기</button><input type="file" id="xf3" accept=".xlsx,.xls,.xlsm" hidden><button class="hbtn" id="upBtn3" type="button" title="MC_LIST 엑셀(전월·전전월 인정실적)">📥 전월·전전월 실적 올리기</button>
   </div>
 </header>
 <nav class="hubnav"><a href="index.html">🏠 홈</a><a href="index.html#mgr">🧑‍💼 신입지점장 OJT</a><a href="index.html#stf">🧑‍🎓 신입매니저 OJT</a><a href="index.html#mon">📅 월간활동일정</a><a href="coaching.html">📝 매니저코칭노트</a><a href="goal.html" class="on">🎯 매니저목표진척</a><a href="golden.html">🏅 본부골든룰</a></nav>
@@ -183,7 +183,7 @@ const won=n=>Math.round(n||0).toLocaleString("ko-KR");
 const man=n=>(Math.round(n/1000)/10).toLocaleString("ko-KR")+"만원";
 const bnum=b=>parseInt((b||"").replace(/\D/g,""))||0;
 const bshort=b=>bnum(b)+"지점";
-let sb,me="",targets=[],perf=new Map(),meta=null,cmap=new Map();
+let sb,me="",targets=[],perf=new Map(),meta=null,cmap=new Map(),contracts=new Map(),cmeta=null,hist=new Map(),hmeta=null,hym="";
 let noteKey=null,notesCur=[],noteMgr=null,tab="b",center="전체",branch="전체",fil="all",selB="전체",selM="전체",selCode=null;
 let TH={"케어메이트":100000,"10만 이상":100000,"20만 이상":200000},DEDUPE=false,loaded=false;
 try{const s=JSON.parse(localStorage.getItem("goal.opts2")||"null");if(s){TH=s.TH||TH;DEDUPE=!!s.DEDUPE}}catch(e){}
@@ -206,6 +206,8 @@ function buildPeople(rows){
     p.care=t.has("케어메이트");
     p.eff=DEDUPE?[p.main||(p.care?"케어메이트":null)].filter(Boolean):[...(p.care?["케어메이트"]:[]),...(p.main?[p.main]:[])];
     const pf=perf.get(p.code)||{};p.perf=pf.perf||0;p.cnt=pf.cnt||0;p.w=pf.w||[0,0,0,0,0];
+    {const ct=contracts.get(p.code);p.cc=ct?ct.cnt:0;p.cs=ct?ct.s:[0,0,0,0]}
+    {const hh=hist.get(p.code);p.h1=hh?hh.m1:0;p.h2=hh?hh.m2:0}
     p.quit=/해촉/.test(p.note);
     p.hit={};p.eff.forEach(x=>p.hit[x]=p.perf>=TH[x]);
     p.center=cmap.get(bnum(p.branch)+"|"+p.mgr)||byName(p.mgr)||"미지정";
@@ -245,7 +247,7 @@ function renderB(all,brs){
   $("#branches").innerHTML=`<span class="lbl">지점</span>`+["전체",...brs].map(b=>`<button type="button" class="pill ${branch===b?"on":""}" data-b="${esc(b)}">${b==="전체"?b:bshort(b)}</button>`).join("");
   const view=scoped(all),k=blank();view.forEach(p=>addTo(k,p));
   const paid=view.filter(p=>p.perf>0).length;
-  $("#kpis").innerHTML=`<div class="card kpi"><div class="l">대상 인원</div><div class="b">${view.length}<small>명</small></div><div class="mu">실적 있는 사람 ${paid}명</div></div>`+
+  $("#kpis").innerHTML=`<div class="card kpi"><div class="l">대상 인원</div><div class="b">${view.length}<small>명</small></div><div class="mu">실적 있는 사람 ${paid}명 · 가계약 ${f0(view.reduce((s,p)=>s+p.cc,0))}건</div></div>`+
     TIERS.map(t=>{const [a,b]=[k[t][1],k[t][0]],pc=b?Math.round(a/b*100):0;return `<div class="card kpi"><div class="l">${t}</div><div class="b">${a}<small> / ${b}명</small></div><div class="bar"><i style="width:${pc}%"></i></div><div class="mu">달성률 ${b?pc+"%":"목표 없음"}</div></div>`}).join("");
   const byB=new Map();
   view.forEach(p=>{if(!byB.has(p.branch))byB.set(p.branch,{head:p.head,m:new Map()});const b=byB.get(p.branch);if(!b.m.has(p.mgr))b.m.set(p.mgr,[]);b.m.get(p.mgr).push(p)});
@@ -253,7 +255,7 @@ function renderB(all,brs){
     const B=byB.get(bk),sub=blank();let n=0;B.m.forEach(l=>l.forEach(p=>{addTo(sub,p);n++}));
     const rows=[...B.m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"ko")).map(([mg,l])=>{
       const c=blank();l.forEach(p=>addTo(c,p));
-      return `<div class="mrow" data-m="${esc(bk+"|"+mg)}"><div class="nm"><b>${esc(mg)}</b><div>${l.length}명${center==="전체"&&l[0].center!=="미지정"?" · "+esc(l[0].center):""}</div></div>${TIERS.map(t=>cellHtml(c[t])).join("")}</div>`}).join("");
+      return `<div class="mrow" data-m="${esc(bk+"|"+mg)}"><div class="nm"><b>${esc(mg)}</b><div>${l.length}명${center==="전체"&&l[0].center!=="미지정"?" · "+esc(l[0].center):""}</div><div>가계약 ${f0(l.reduce((s,p)=>s+p.cc,0))}건</div></div>${TIERS.map(t=>cellHtml(c[t])).join("")}</div>`}).join("");
     return `<div class="card bc" id="bc-${bnum(bk)}"><div class="hd2"><h3>${bshort(bk)} <span class="mu">지점장 ${esc(B.head)}</span></h3><span class="mu">대상 ${n}명</span><span data-html2canvas-ignore style="display:flex;gap:6px"><button type="button" class="sbtn" data-img="copy" data-t="bc-${bnum(bk)}" data-n="${bshort(bk)}_매니저현황">📋 이미지 복사</button><button type="button" class="sbtn" data-img="save" data-t="bc-${bnum(bk)}" data-n="${bshort(bk)}_매니저현황">🖼 이미지 저장</button></span></div>
       <div class="mrow th"><div>매니저</div><div>케어메이트</div><div>10만 이상</div><div>20만 이상</div></div>${rows}
       <div class="mrow tot"><div>지점 합계</div>${TIERS.map(t=>cellHtml(sub[t])).join("")}</div></div>`}).join("")||`<div class="card empty" style="grid-column:1/-1">조건에 맞는 자료가 없습니다.</div>`;
@@ -278,10 +280,10 @@ function renderP(all,brs){
   $("#focus").innerHTML=`<h2>오늘 챙길 ${fo.length}명<small>달성까지 적게 남은 순 · 실적이 있는 미달 사용인</small></h2>`+(fo.length?`<div class="fgrid">${fo.map((p,i)=>`<div class="fc" data-p="${esc(p.code)}"><span class="rk">${i+1}</span><b>${esc(p.name)}</b><div class="ag">${esc(p.agency)}</div><div class="nx"><em>${man(p.remain)}</em> 더 → ${p.next}</div><div class="mu">${esc(p.mgr)} · 현재 ${man(p.perf)}</div></div>`).join("")}</div>`:`<div class="mu">대상이 없습니다.</div>`);
   $("#cnt").textContent=`${list.length}명`;
   const wk=[0,1,2,3,4].filter(i=>all.some(p=>p.w[i]>0));   // 실적이 있는 주차만 열로 표시
-  $("#plist").innerHTML=`<div style="padding:12px 16px;border-bottom:1px solid var(--ln)"><b style="font-size:17px">${esc(selM==="전체"?"사용인 목록":selM+" 매니저 사용인 목록")}</b> <span class="mu">${[center!=="전체"?center+" 센터장":"",branch!=="전체"?bshort(branch):"",FIL.find(x=>x[0]===fil)[1]].filter(Boolean).join(" · ")} · ${list.length}명</span>${wk.length?"":` <span class="tag no">주차별 실적 자료 없음 — 엑셀 다시 올리기 필요</span>`}</div>`+(list.length?`<table><thead><tr><th>매니저</th><th>대리점(지사)</th><th>사용인</th><th>목표 구간</th>${wk.map(i=>`<th class="n">${i+1}주차</th>`).join("")}<th class="n">실적 합계</th><th class="n">남은 금액</th><th>달성</th></tr></thead><tbody>${list.slice(0,400).map(p=>`<tr class="pr ${selCode===p.code?"sel":""}" data-p="${esc(p.code)}"><td>${esc(p.mgr)}</td><td>${esc(p.agency)}</td><td><b>${esc(p.name)}</b></td><td>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</td>${wk.map(i=>`<td class="n">${won(p.w[i])}</td>`).join("")}<td class="n"><b>${p.perf?won(p.perf)+"원":"0원"}</b></td><td class="n">${p.allHit?"-":man(p.remain)}</td><td>${p.eff.map(e=>p.hit[e]?`<span class="tag ok2">${e} ✓</span>`:"").join("")||`<span class="tag no">미달</span>`}</td></tr>`).join("")}</tbody></table>${list.length>400?`<div class="empty">상위 400명만 표시했습니다. 조건을 좁혀 주세요.</div>`:""}`:`<div class="empty">조건에 맞는 사용인이 없습니다.</div>`);
+  $("#plist").innerHTML=`<div style="padding:12px 16px;border-bottom:1px solid var(--ln)"><b style="font-size:17px">${esc(selM==="전체"?"사용인 목록":selM+" 매니저 사용인 목록")}</b> <span class="mu">${[center!=="전체"?center+" 센터장":"",branch!=="전체"?bshort(branch):"",FIL.find(x=>x[0]===fil)[1]].filter(Boolean).join(" · ")} · ${list.length}명</span>${wk.length?"":` <span class="tag no">주차별 실적 자료 없음 — 엑셀 다시 올리기 필요</span>`}</div>`+(list.length?`<table><thead><tr><th>매니저</th><th>대리점(지사)</th><th>사용인</th><th>목표 구간</th>${hist.size?`<th class="n">${hl(2)}월<br>실적</th><th class="n">${hl(1)}월<br>실적</th>`:""}${wk.map(i=>`<th class="n">${i+1}주차</th>`).join("")}<th class="n">실적 합계</th><th class="n">가계약<br>건수</th><th class="n">남은 금액</th><th>달성</th></tr></thead><tbody>${list.slice(0,400).map(p=>`<tr class="pr ${selCode===p.code?"sel":""}" data-p="${esc(p.code)}"><td>${esc(p.mgr)}</td><td>${esc(p.agency)}</td><td><b>${esc(p.name)}</b></td><td>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</td>${hist.size?`<td class="n">${won(p.h2)}</td><td class="n">${won(p.h1)}</td>`:""}${wk.map(i=>`<td class="n">${won(p.w[i])}</td>`).join("")}<td class="n"><b>${p.perf?won(p.perf)+"원":"0원"}</b></td><td class="n"><b>${p.cc}</b></td><td class="n">${p.allHit?"-":man(p.remain)}</td><td>${p.eff.map(e=>p.hit[e]?`<span class="tag ok2">${e} ✓</span>`:"").join("")||`<span class="tag no">미달</span>`}</td></tr>`).join("")}</tbody></table>${list.length>400?`<div class="empty">상위 400명만 표시했습니다. 조건을 좁혀 주세요.</div>`:""}`:`<div class="empty">조건에 맞는 사용인이 없습니다.</div>`);
   const p=selCode&&all.find(x=>x.code===selCode);
   $("#side").innerHTML=p?`<h3>${esc(p.name)}</h3><div class="mu">${esc(p.agency)}</div>
-    <div class="kv"><span>코드</span><span>${esc(p.code)}</span><span>지점</span><span>${bshort(p.branch)} · 지점장 ${esc(p.head)}</span><span>매니저</span><span>${esc(p.mgr)}${p.center!=="미지정"?" ("+esc(p.center)+" 센터장)":""}</span><span>목표 구간</span><span>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</span><span>주차별 실적</span><span>${wk.map(i=>`${i+1}주차 ${won(p.w[i])}원`).join("<br>")||"<span class=\"mu\">저장된 주차별 자료 없음<br>(goal-weeks.sql 실행 후 엑셀을 다시 올리면 표시됩니다)</span>"}</span><span>실적 합계</span><span><b>${won(p.perf)}원</b> (${p.cnt}건)</span></div>
+    <div class="kv"><span>코드</span><span>${esc(p.code)}</span><span>지점</span><span>${bshort(p.branch)} · 지점장 ${esc(p.head)}</span><span>매니저</span><span>${esc(p.mgr)}${p.center!=="미지정"?" ("+esc(p.center)+" 센터장)":""}</span><span>목표 구간</span><span>${p.eff.map(e=>`<span class="tag ${e==="20만 이상"?"t20":""}">${e}</span>`).join("")}</span>${hist.size?`<span>${hl(2)}월 실적</span><span><b>${won(p.h2)}원</b></span><span>${hl(1)}월 실적</span><span><b>${won(p.h1)}원</b></span>`:""}<span>주차별 실적</span><span>${wk.map(i=>`${i+1}주차 ${won(p.w[i])}원`).join("<br>")||"<span class=\"mu\">저장된 주차별 자료 없음<br>(goal-weeks.sql 실행 후 엑셀을 다시 올리면 표시됩니다)</span>"}</span><span>실적 합계</span><span><b>${won(p.perf)}원</b> (${p.cnt}건)</span><span>가계약 건수</span><span><b>${p.cc}건</b>${p.cc?`<br><span class="mu">설계중 ${p.cs[0]} · 심사중 ${p.cs[1]} · 심사완료 ${p.cs[2]} · 계약체결 ${p.cs[3]}</span>`:""}</span></div>
     ${p.eff.map(e=>{const pc=Math.min(100,Math.round(p.perf/TH[e]*100));return `<div style="margin-top:10px"><b>${e}</b> <span class="mu">기준 ${won(TH[e])}원</span> ${p.hit[e]?`<span class="ok">✓ 달성</span>`:`<span class="tag no">${man(TH[e]-p.perf)} 남음</span>`}<div class="bar ${p.hit[e]?"g":""}"><i style="width:${pc}%"></i></div></div>`}).join("")}`
     :`<div class="empty">목록에서 사용인을 선택하면 상세가 표시됩니다</div>`;
   mgrNote(base);
@@ -359,6 +361,98 @@ async function exportImg(id,mode,name){
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-img]");if(b)exportImg(b.dataset.t,b.dataset.img,b.dataset.n)});
 
+const f0=n=>Number(n||0).toLocaleString("ko-KR");
+/* ---- 가계약 리스트 올리기 (조직코드 기준으로 사용인별 가계약 건수) ---- */
+const ST=["설계중","심사중","심사완료","계약체결"];
+function parseContracts(a){
+  const hi=a.findIndex(r=>r.some(c=>cl(c)==="조직코드")||r.some(c=>cl(c).includes("가계약번호")));
+  if(hi<0)throw new Error("제목 줄에서 「조직코드」(사용인 코드) 열을 찾지 못했습니다.");
+  const H=a[hi].map(cl);
+  let ci=H.findIndex(x=>x==="조직코드");if(ci<0)ci=13;                  // N열
+  const ni=H.findIndex(x=>x==="조직명"),si=H.findIndex(x=>x==="가계약상태코드명"),ki=H.findIndex(x=>x.includes("가계약번호")),bi=H.findIndex(x=>x==="기준일자");
+  const by=new Map(),seen=new Set();let rows=0,dup=0,maxD=0;
+  a.slice(hi+1).forEach(r=>{
+    const code=String(r[ci]??"").trim();if(!code||!/\d/.test(code))return;
+    if(ki>=0){const k=String(r[ki]).trim();if(k){if(seen.has(k)){dup++;return}seen.add(k)}}   // 같은 가계약번호는 한 번만
+    rows++;
+    let o=by.get(code);if(!o){o={code,name:ni>=0?String(r[ni]).trim():"",cnt:0,s:[0,0,0,0]};by.set(code,o)}
+    o.cnt++;
+    if(si>=0){const j=ST.indexOf(String(r[si]).trim());if(j>=0)o.s[j]++}
+    if(bi>=0&&typeof r[bi]==="number"&&r[bi]>maxD)maxD=r[bi];
+  });
+  return {list:[...by.values()],rows,dup,asOf:maxD?toISO(maxD):""};
+}
+const toISO=v=>{const d=new Date(Math.round((v-25569)*86400000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`};
+async function uploadContracts(file){
+  try{
+    toast("가계약 리스트를 읽는 중… (몇 초 걸릴 수 있습니다)");
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array",dense:true});
+    const a=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+    const {list,rows,dup,asOf}=parseContracts(a);
+    if(!list.length)throw new Error("올릴 자료가 없습니다.");
+    const known=new Set(targets.map(x=>x.code));
+    const hit=list.filter(o=>known.has(o.code)),hitCnt=hit.reduce((s,o)=>s+o.cnt,0);
+    if(!confirm(`가계약 리스트${asOf?" (기준 "+asOf+")":""}\n가계약 ${f0(rows)}건 · 사용인 코드 ${f0(list.length)}명${dup?`\n(같은 가계약번호 ${dup}건은 한 번만 계산)`:""}\n\n그중 목표 대상 사용인과 맞는 코드: ${f0(hit.length)}명 (${f0(hitCnt)}건)\n지금 저장된 가계약 건수는 이 파일 내용으로 바뀝니다. 계속할까요?`))return;
+    toast("저장 중…");
+    let r=await sb.from("goal_contracts").delete().neq("code","");if(r.error)throw r.error;
+    const rowsOut=list.map(o=>({code:o.code,name:o.name,cnt:o.cnt,s1:o.s[0],s2:o.s[1],s3:o.s[2],s4:o.s[3]}));
+    for(let i=0;i<rowsOut.length;i+=500){r=await sb.from("goal_contracts").insert(rowsOut.slice(i,i+500));if(r.error)throw r.error}
+    r=await sb.from("goal_meta").upsert({id:"contract",updated_at:new Date().toISOString(),updated_by:me,file_name:file.name,target_rows:list.length,perf_rows:rows});if(r.error)throw r.error;
+    toast("올렸습니다");await load();
+  }catch(e){alert("올리지 못했습니다.\n"+(e&&e.message?e.message:"잠시 후 다시 시도해 주세요.")+(/goal_contracts|relation|schema cache/i.test((e&&e.message)||"")?"\n\n수퍼베이스 SQL Editor에서 goal-contracts.sql 을 한 번 실행해 주세요.":""))}
+}
+$("#upBtn2").onclick=()=>$("#xf2").click();
+$("#xf2").onchange=e=>{const fl=e.target.files[0];e.target.value="";if(fl)uploadContracts(fl)};
+
+const hl=k=>{const c=hym?+String(hym).slice(4,6):new Date().getMonth()+1;return ((c-k-1+12)%12)+1};   // k=1 전월, k=2 전전월 (기준년월 11월이면 10월, 9월)
+/* ---- 전월·전전월 실적 올리기 (MC_LIST: 현재대리점설계사조직코드 기준) ---- */
+function parseHist(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  let rows;
+  if(Array.isArray(ws))rows=ws.map(r=>r?r.map(c=>c?c.v:""):[]);
+  else rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+  const hi=rows.findIndex(r=>r.some(c=>cl(c)==="이전월인정실적"));
+  if(hi<0)throw new Error("제목 줄에서 「이전월인정실적」, 「전전월인정실적」 열을 찾지 못했습니다.");
+  const H=rows[hi].map(cl);
+  const ix=n=>H.indexOf(n);
+  let ci=ix("현재대리점설계사조직코드");if(ci<0)ci=ix("조직코드");
+  const ni=ix("현재대리점설계사조직명"),m1=ix("이전월인정실적"),m2=ix("전전월인정실적"),bi=ix("현재지점조직명"),yi=ix("기준년월");
+  if(ci<0)throw new Error("사용인 코드 열(현재대리점설계사조직코드)을 찾지 못했습니다.");
+  if(m2<0)throw new Error("「전전월인정실적」 열을 찾지 못했습니다.");
+  const by=new Map();let total=0,ym="";
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];if(!r)continue;total++;
+    if(bi>=0&&!String(r[bi]??"").includes("충청"))continue;    // 충청GA 지점만 사용
+    const code=String(r[ci]??"").trim();if(!code||!/\d/.test(code))continue;
+    if(!ym&&yi>=0)ym=String(r[yi]??"").trim();
+    const n1=Number(String(r[m1]??"").replace(/,/g,""))||0,n2=Number(String(r[m2]??"").replace(/,/g,""))||0;
+    const o=by.get(code);
+    if(o){o.m1+=n1;o.m2+=n2}else by.set(code,{code,name:ni>=0?String(r[ni]??"").trim():"",m1:n1,m2:n2});
+  }
+  return {list:[...by.values()],total,ym};
+}
+async function uploadHist(file){
+  try{
+    toast("파일을 읽는 중… (용량이 커서 30초 정도 걸립니다)");
+    await new Promise(r=>setTimeout(r,50));
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array",dense:true});
+    const {list,total,ym}=parseHist(wb);
+    if(!list.length)throw new Error("충청GA 자료를 찾지 못했습니다.");
+    const known=new Set(targets.map(x=>x.code)),hit=list.filter(o=>known.has(o.code));
+    const c=ym?+ym.slice(4,6):0,l1=c?((c+10)%12)+1:"전월",l2=c?((c+9)%12)+1:"전전월";
+    const s1=list.reduce((s,o)=>s+o.m1,0),s2=list.reduce((s,o)=>s+o.m2,0);
+    if(!confirm(`전월·전전월 인정실적${ym?" (기준년월 "+ym+")":""}\n충청GA 사용인 ${f0(list.length)}명 (전체 ${f0(total)}줄 중)\n\n· ${l2}월 실적(전전월) 합계 ${f0(s2)}원\n· ${l1}월 실적(전월) 합계 ${f0(s1)}원\n\n목표 대상 사용인과 맞는 코드: ${f0(hit.length)}명\n지금 저장된 전월·전전월 실적은 이 파일 내용으로 바뀝니다. 계속할까요?`))return;
+    toast("저장 중…");
+    let r=await sb.from("goal_hist").delete().neq("code","");if(r.error)throw r.error;
+    const out=list.map(o=>({code:o.code,name:o.name,ym,m1:o.m1,m2:o.m2}));
+    for(let i=0;i<out.length;i+=500){r=await sb.from("goal_hist").insert(out.slice(i,i+500));if(r.error)throw r.error}
+    r=await sb.from("goal_meta").upsert({id:"hist",updated_at:new Date().toISOString(),updated_by:me,file_name:file.name,target_rows:list.length,perf_rows:total});if(r.error)throw r.error;
+    toast("올렸습니다");await load();
+  }catch(e){alert("올리지 못했습니다.\n"+(e&&e.message?e.message:"잠시 후 다시 시도해 주세요.")+(/goal_hist|relation|schema cache/i.test((e&&e.message)||"")?"\n\n수퍼베이스 SQL Editor에서 goal-hist.sql 을 한 번 실행해 주세요.":""))}
+}
+$("#upBtn3").onclick=()=>$("#xf3").click();
+$("#xf3").onchange=e=>{const fl=e.target.files[0];e.target.value="";if(fl)uploadHist(fl)};
+
 /* ---- 불러오기 ---- */
 async function fetchAll(table,cols){
   let out=[];
@@ -371,6 +465,10 @@ async function load(){
     targets=t;perf=new Map(p.map(r=>[r.code,{perf:+r.perf||0,cnt:r.cnt||0,w:[+r.w1||0,+r.w2||0,+r.w3||0,+r.w4||0,+r.w5||0]}]));meta=m.data;
     $("#notice").hidden=true;
   }catch(e){$("#notice").hidden=false;$("#notice").textContent="서버에서 자료를 불러오지 못했습니다. 수퍼베이스에서 goal.sql 을 실행했는지 확인해 주세요.";targets=[]}
+  hist=new Map();hmeta=null;hym="";
+  try{const hr=await fetchAll("goal_hist");hr.forEach(x=>{hist.set(x.code,{m1:+x.m1||0,m2:+x.m2||0});if(!hym&&x.ym)hym=x.ym});const hm=await sb.from("goal_meta").select("*").eq("id","hist").maybeSingle();hmeta=hm.data}catch(e){}
+  contracts=new Map();cmeta=null;
+  try{const cr=await fetchAll("goal_contracts");cr.forEach(x=>contracts.set(x.code,{cnt:x.cnt||0,s:[x.s1||0,x.s2||0,x.s3||0,x.s4||0]}));const cm=await sb.from("goal_meta").select("*").eq("id","contract").maybeSingle();cmeta=cm.data}catch(e){}
   cmap=new Map();
   try{ // 센터장 매핑: goal_centers (없으면 매니저코칭노트 명단으로 대체)
     const r=await fetchAll("goal_centers","branch_no,manager,center");r.forEach(x=>cmap.set(x.branch_no+"|"+x.manager,x.center));
@@ -379,7 +477,7 @@ async function load(){
   coachBr=new Map();
   try{const r=await fetchAll("coach_managers","code,name,branch");r.forEach(x=>coachBr.set(bnum(x.branch)+"|"+x.name,{code:x.code,branch:x.branch}))}catch(e){}
   loaded=true;
-  $("#metaLine").textContent=meta?`${new Date(meta.updated_at).toLocaleString("ko-KR")} 업로드 기준 · ${meta.updated_by} (${meta.file_name})`:"자료를 올리면 목표·실적이 표시됩니다.";
+  $("#metaLine").textContent=(meta?`${new Date(meta.updated_at).toLocaleString("ko-KR")} 업로드 기준 · ${meta.updated_by} (${meta.file_name})`:"자료를 올리면 목표·실적이 표시됩니다.")+(cmeta?` · 가계약 리스트 ${new Date(cmeta.updated_at).toLocaleString("ko-KR")} (${cmeta.file_name})`:"")+(hmeta?` · 전월·전전월 실적 ${new Date(hmeta.updated_at).toLocaleString("ko-KR")} (${hmeta.file_name})`:"");
   render();
 }
 
