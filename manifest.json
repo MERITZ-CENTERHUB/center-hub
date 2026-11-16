@@ -1,0 +1,23 @@
+﻿{
+  "name": "센터장 업무허브",
+  "short_name": "센터장",
+  "description": "충청GA본부 센터장 업무허브",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e03226",
+  "theme_color": "#e03226",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ],
+  "shortcuts": [
+    {"name":"매니저코칭노트","url":"./coaching.html","icons":[{"src":"icon-192.png","sizes":"192x192"}]},
+    {"name":"매니저목표진척","url":"./goal.html","icons":[{"src":"icon-192.png","sizes":"192x192"}]},
+    {"name":"본부골든룰","url":"./golden.html","icons":[{"src":"icon-192.png","sizes":"192x192"}]}
+  ]
+}
+
+
+
