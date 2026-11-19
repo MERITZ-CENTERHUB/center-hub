@@ -90,7 +90,7 @@ const f=n=>n==null||n===""?"":Number(n).toLocaleString("ko-KR");
 const bnum=b=>parseInt((b||"").replace(/\D/g,""))||0;
 const pad=n=>String(n).padStart(2,"0");
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
-const NOTE_OPTS=["휴가","월차","반차","병가"];
+const NOTE_OPTS=["휴가","월차","반차","병가","교육"];
 let sb,me="",day="",days=[],rows=[],checks=new Map(),sel=new Set(),loaded=false,baseOnly=false;
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2600)}
 const md=s=>s?`${+s.slice(5,7)}월 ${+s.slice(8,10)}일`:"";
