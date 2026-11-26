@@ -160,24 +160,57 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>new Date().toISOString().slice(0,10);
 
+const DEFS={
+ mgr:{b:"mgr"},stf:{b:"stf"},mon:{b:"mon"},
+ coaching:{name:"📝 매니저코칭노트",href:"coaching.html",desc:"매니저별 일자·방식·코칭내용 기록 (로그인한 센터장 모두가 같은 기록 조회)",nocoach:true},
+ goal:{name:"🎯 매니저목표진척",href:"goal.html",desc:"지점·지점장·매니저별 케어메이트/10만/20만 목표와 진척 현황"},
+ golden:{name:"🏅 본부골든룰",href:"golden.html",desc:"날짜별 출근알리기·가계약·매핑실적과 정보공유 체크"},
+ spot:{name:"🎁 매니저스팟시상",href:"spot.html",desc:"스팟시상별 매니저 목표 대비 진척·달성율·부족금액"}
+};
+const DEF_ORDER=["mgr","stf","mon","coaching","goal","golden","spot"];
+let reorder=false,ordDraft=[];
+const isAdmin=()=>me==="김미송";   // 관리자(김미송 계정)만 순서 변경 가능
+function order(){const s=settings["home-order"]?.trainees,o=(Array.isArray(s)?s:[]).filter(k=>DEF_ORDER.includes(k));return o.concat(DEF_ORDER.filter(k=>!o.includes(k)))}
+const hiddenFor=k=>DEFS[k].nocoach&&NOCOACH.includes(me);
+const dlabel=k=>{const d=DEFS[k];if(d.b){const b=BOARDS.find(x=>x.id===d.b);return b.icon+" "+b.name}return d.name};
+
 function renderNav(){
-  $("#nav").innerHTML=[{id:"home",name:"🏠 홈"},...BOARDS.map(b=>({id:b.id,name:b.icon+" "+b.name}))]
-   .map(b=>`<button class="${cur===b.id?"on":""}" data-id="${b.id}">${b.name}</button>`).join("")+``+(NOCOACH.includes(me)?"":`<button data-href="coaching.html">📝 매니저코칭노트</button>`)+`<button data-href="goal.html">🎯 매니저목표진척</button><button data-href="golden.html">🏅 본부골든룰</button>`+(me==="김미송"?`<button data-href="admin.html">🔑 계정관리</button>`:"");
-  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.href){location.href=b.dataset.href;return}cur=b.dataset.id;filter="";location.hash=cur;render()});
+  $("#nav").innerHTML=`<button class="${cur==="home"?"on":""}" data-id="home">🏠 홈</button>`+order().filter(k=>!hiddenFor(k)).map(k=>DEFS[k].b?`<button class="${cur===k?"on":""}" data-id="${k}">${dlabel(k)}</button>`:`<button data-href="${DEFS[k].href}">${dlabel(k)}</button>`).join("")+(me==="김미송"?`<button data-href="admin.html">🔑 계정관리</button>`:"");
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.href){location.href=b.dataset.href;return}cur=b.dataset.id;filter="";reorder=false;location.hash=cur;render()});
 }
 function render(){renderNav();cur==="home"?renderHome():renderBoard(BOARDS.find(b=>b.id===cur))}
 
-function renderHome(){
-  $("#main").innerHTML=`<div class="cards">${BOARDS.map(b=>{
-    const l=items.filter(i=>i.board===b.id),done=l.filter(i=>i.status==="완료").length,p=l.length?Math.round(done/l.length*100):0;
-    const next=l.filter(i=>i.status!=="완료"&&i.date>=today()).sort((a,c)=>a.date.localeCompare(c.date))[0];
+function homeCard(k){
+  const d=DEFS[k];
+  if(d.b){
+    const b=BOARDS.find(x=>x.id===d.b),l=items.filter(i=>i.board===b.id);
+    const next=l.filter(i=>i.date>=today()).sort((a,c)=>a.date.localeCompare(c.date))[0];
     return `<div class="card hubcard" data-id="${b.id}"><h3>${b.icon} ${b.name}</h3><div class="mute">${b.desc}</div>
       <div class="mute" style="margin-top:8px">등록된 일정 ${l.length}건</div>
-      <div style="margin-top:10px;font-size:12px">다음 일정: ${next?`<b>${esc(next.date)}</b> ${esc(next.kind?L(next):next.title)}`:"없음"}</div></div>`}).join("")+`${NOCOACH.includes(me)?"":`<div class="card" style="cursor:pointer" onclick="location.href='coaching.html'"><h3>📝 매니저코칭노트</h3><div class="mute">매니저별 일자·방식·코칭내용 기록 (로그인한 센터장 모두가 같은 기록 조회)</div><div style="margin-top:10px;font-size:12px"><b>열기 →</b></div></div>`}<div class="card" style="cursor:pointer" onclick="location.href='goal.html'"><h3>🎯 매니저목표진척</h3><div class="mu">지점·지점장·매니저별 케어메이트/10만/20만 목표와 진척 현황</div><div style="margin-top:10px;font-size:12px"><b>열기 →</b></div></div><div class="card" style="cursor:pointer" onclick="location.href='golden.html'"><h3>🏅 본부골든룰</h3><div class="mu">날짜별 출근알리기·가계약·매핑실적과 정보공유 체크</div><div style="margin-top:10px;font-size:12px"><b>열기 →</b></div></div>`}</div>
-    <p class="mute" style="margin-top:18px">카드를 눌러 각 대시보드로 이동하세요. 일정은 누구나 추가·수정·삭제할 수 있고 실시간으로 공유됩니다.</p>`;
-  document.querySelectorAll(".hubcard").forEach(c=>c.onclick=()=>{cur=c.dataset.id;location.hash=cur;render()});
+      <div style="margin-top:10px;font-size:12px">다음 일정: ${next?`<b>${esc(next.date)}</b> ${esc(next.kind?L(next):next.title)}`:"없음"}</div></div>`;
+  }
+  return `<div class="card hubcard2" data-href="${d.href}" style="cursor:pointer"><h3>${d.name}</h3><div class="mu mute">${d.desc}</div><div style="margin-top:10px;font-size:12px"><b>열기 →</b></div></div>`;
 }
-
+function renderHome(){
+  const ids=reorder?ordDraft:order().filter(k=>!hiddenFor(k));
+  const bar=isAdmin()?(reorder?`<div class="card" style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>↕ 대시보드 순서 변경</b><span class="mute">각 카드의 ▲ ▼ 버튼으로 위치를 옮긴 뒤 저장하세요. 모든 로그인 계정에 같은 순서로 보입니다.</span><span class="sp"></span><button class="btn ghost" id="ordReset" type="button">기본 순서로</button><button class="btn ghost" id="ordCancel" type="button">취소</button><button class="btn" id="ordSave" type="button">순서 저장</button></div>`:`<div style="margin-bottom:10px;text-align:right"><button class="btn ghost" id="ordEdit" type="button">↕ 순서 변경</button></div>`):"";
+  $("#main").innerHTML=bar+`<div class="cards">${ids.map(k=>reorder?`<div style="position:relative">${homeCard(k).replace(/class="card hubcard2?"/,'class="card"').replace(/ data-href="[^"]*"/,"").replace(/ data-id="[^"]*"/,"")}<div style="position:absolute;top:10px;right:10px;display:flex;gap:4px"><button class="btn ghost" data-mv="${k}:-1" type="button" ${ids[0]===k?"disabled":""}>▲</button><button class="btn ghost" data-mv="${k}:1" type="button" ${ids[ids.length-1]===k?"disabled":""}>▼</button></div></div>`:homeCard(k)).join("")}</div>
+    <p class="mute" style="margin-top:18px">${reorder?"":"카드를 눌러 각 대시보드로 이동하세요. 일정은 누구나 추가·수정·삭제할 수 있고 실시간으로 공유됩니다."}</p>`;
+  if(reorder){
+    document.querySelectorAll("[data-mv]").forEach(x=>x.onclick=()=>{const [k,dv]=x.dataset.mv.split(":"),i=ordDraft.indexOf(k),j=i+ +dv;if(j<0||j>=ordDraft.length)return;[ordDraft[i],ordDraft[j]]=[ordDraft[j],ordDraft[i]];renderHome()});
+    $("#ordCancel").onclick=()=>{reorder=false;renderHome()};
+    $("#ordReset").onclick=()=>{ordDraft=DEF_ORDER.slice();renderHome()};
+    $("#ordSave").onclick=async()=>{
+      const o=ordDraft.slice();settings["home-order"]={id:"home-order",trainees:o};reorder=false;render();
+      const {error}=await sb.from("settings").upsert({id:"home-order",trainees:o});
+      if(error){$("#status").textContent="(순서 저장 실패: "+error.message+")";load()}else flash("순서를 저장했습니다");
+    };
+  }else{
+    if($("#ordEdit"))$("#ordEdit").onclick=()=>{reorder=true;ordDraft=order().slice();renderHome()};
+    document.querySelectorAll(".hubcard").forEach(c=>c.onclick=()=>{cur=c.dataset.id;location.hash=cur;render()});
+    document.querySelectorAll(".hubcard2").forEach(c=>c.onclick=()=>{location.href=c.dataset.href});
+  }
+}
 function renderBoard(b){
   const all=items.filter(i=>i.board===b.id);
   const whos=b.regions?b.regions:[...new Set(all.map(i=>i.who).filter(Boolean))];
