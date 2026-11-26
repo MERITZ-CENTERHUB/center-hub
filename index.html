@@ -52,7 +52,7 @@ select,input,textarea{font-family:inherit;font-size:13px;padding:7px 9px;border:
 .cal .h{min-height:auto;text-align:center;background:#f0f2f5;font-weight:700;padding:6px}
 .cal .n{color:var(--mute)}
 .cal .ev{background:#e8eefc;color:#1e3fa8;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.cal .ev.s-완료{background:#dff3e8;color:#14724a;text-decoration:line-through}
+
 .cal .ev.w{white-space:normal;line-height:1.3}
 .cal .ev.l0{background:#dce6f2;color:#1b3a63}.cal .ev.l1{background:#e3efd3;color:#2d5a14}.cal .ev.l2{background:#f3e1f5;color:#5d2a66}
 .cal .ev.edu{background:#fff4b8;color:#5c4a00;border-top:1px dashed #c9b84a}
@@ -67,7 +67,7 @@ select,input,textarea{font-family:inherit;font-size:13px;padding:7px 9px;border:
 #login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:50}
 .legend{display:flex;gap:6px;font-size:11px}.legend span{padding:2px 8px;border-radius:99px}
 .cal .ev.etc{background:#fde3e3;color:#c00;text-align:center}
-.cal .ev.s-완료{background:#dff3e8;color:#14724a;text-decoration:line-through}
+
 .trn{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .trn input{width:240px}
 .grp{display:none}.grp.on{display:block}
@@ -137,10 +137,9 @@ dialog label{display:block;margin:10px 0 4px;font-size:12px;color:var(--mute)}
     <div class="grp" id="g-edu"><label>시간</label><input id="mTime" placeholder="예: 14~16시"><label>교육 내용</label><input id="mTitle" placeholder="예: 간편 전산"><label>진행 센터장(강사)</label><input id="mLect" placeholder="예: 허은재"></div>
     <div class="grp" id="g-etc"><label>내용</label><input id="mEtc" placeholder="예: 전략회의"></div>
   </div>
-  <label>상태</label>
-  <select id="fStatus"><option>예정</option><option>진행중</option><option>완료</option></select>
+  <select id="fStatus" hidden><option>예정</option><option>진행중</option><option>완료</option></select>
   <label>메모</label><textarea id="fMemo" rows="3"></textarea>
-  <div class="foot"><button class="btn ghost ghost" id="fCancel" type="button">취소</button><button class="btn" id="fSave" type="button">저장</button></div>
+  <div class="foot"><button class="btn ghost" id="fDel" type="button" style="margin-right:auto;color:#c00">삭제</button><button class="btn ghost ghost" id="fCancel" type="button">취소</button><button class="btn" id="fSave" type="button">저장</button></div>
 </dialog>
 
 <script>
@@ -190,11 +189,6 @@ function renderBoard(b){
   if(b.lanes)h+=`<div class="card trn" style="margin-bottom:14px"><b>👥 ${calMonth.getMonth()+1}월 신입지점장</b><input id="trnIn" value="${esc(trainees().join(", "))}" placeholder="이름을 쉼표(,)로 구분"><button class="btn" id="trnSave">대상자 저장</button><span class="mute">달마다 따로 저장됩니다. 달력의 칸 구분(색)이 이 순서를 따릅니다.</span></div>`;
   if(b.regions)h+=`<div class="legend" style="margin-bottom:8px"><span style="background:#fff4b8">대전권</span><span style="background:#d9f0d0">청주권</span><span style="background:#bfe6f7">천안권</span><span style="background:#fde3e3;color:#c00">전체(공통)</span></div>`;
   if(b.calendar) h+=calendar(l,b);
-  h+=`<div class="card" style="padding:0;margin-top:14px">${l.filter(i=>!b.lanes||(i.date||"").startsWith(ymKey())).length?l.filter(i=>!b.lanes||(i.date||"").startsWith(ymKey())).map(i=>`<div class="row">
-    <div class="d">${esc(i.date)}</div>
-    <div><div class="t">${esc(i.kind?L(i):i.title)}</div><div class="mute">${i.kind?(i.kind==="escort"?"동행":i.kind==="edu"?"교육":"기타")+(i.memo?" · "+esc(i.memo):""):""}${i.region?"["+esc(i.region)+"] ":""}${!i.kind&&i.who?esc(i.who):""}${i.branch?" · 지점 "+esc(i.branch):""}${i.trainer?" · 담당 "+esc(i.trainer):""}${i.escort?" · 동반 "+esc(i.escort):""}${i.memo?" · "+esc(i.memo):""}</div></div>
-    <div><button class="badge s-${esc(i.status)}" data-st="${i.id}" title="클릭하여 상태 변경">${esc(i.status)}</button>
-    <button class="icon" data-ed="${i.id}">✏️</button><button class="icon" data-del="${i.id}">🗑️</button></div></div>`).join(""):`<div class="empty">아직 일정이 없습니다. 「＋ 일정 추가」로 시작하세요.</div>`}</div>`;
   $("#main").innerHTML=h;
   $("#add").onclick=()=>openDlg(b);
   if($("#trnSave"))$("#trnSave").onclick=async()=>{
@@ -213,11 +207,11 @@ function renderBoard(b){
 function dayHtml(l,ds,b){
   const d=l.filter(i=>i.date===ds);
   if(b.regions){
-    const e=i=>`<div class="ev w ${i.region==="전체"?"rall":"r"+Math.max(b.regions.indexOf(i.region),0)} s-${esc(i.status)}" data-ed="${i.id}" title="${esc(i.region)}">${esc(i.title)}${i.who?"<br>("+esc(i.who)+")":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
+    const e=i=>`<div class="ev w ${i.region==="전체"?"rall":"r"+Math.max(b.regions.indexOf(i.region),0)}" data-ed="${i.id}" title="${esc(i.region)}">${esc(i.title)}${i.who?"<br>("+esc(i.who)+")":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
     return d.filter(i=>i.region==="전체").map(e).join("")+b.regions.map(r=>d.filter(i=>i.region===r).map(e).join("")).join("")+d.filter(i=>i.region!=="전체"&&!b.regions.includes(i.region)).map(e).join("");
   }
-  if(!b.lanes)return d.map(i=>`<div class="ev s-${esc(i.status)}" data-ed="${i.id}" title="${esc(i.who)} ${esc(i.title)}${i.branch?" / 지점 "+esc(i.branch):""}${i.trainer?" / 교육담당 "+esc(i.trainer):""}${i.escort?" / 동반 "+esc(i.escort):""}">${i.who?"["+esc(i.who)+"] ":""}${esc(i.title)}</div>`).join("");
-  const tr=trainees(),ev=(i,c,t)=>`<div class="ev w ${c} s-${esc(i.status)}" data-ed="${i.id}">${t}</div>`;
+  if(!b.lanes)return d.map(i=>`<div class="ev" data-ed="${i.id}" title="${esc(i.who)} ${esc(i.title)}${i.branch?" / 지점 "+esc(i.branch):""}${i.trainer?" / 교육담당 "+esc(i.trainer):""}${i.escort?" / 동반 "+esc(i.escort):""}">${i.who?"["+esc(i.who)+"] ":""}${esc(i.title)}</div>`).join("");
+  const tr=trainees(),ev=(i,c,t)=>`<div class="ev w ${c}" data-ed="${i.id}">${t}</div>`;
   const esc_=d.filter(i=>i.kind==="escort").sort((a,c)=>tr.indexOf(a.who)-tr.indexOf(c.who));
   return esc_.map(i=>{const k=tr.indexOf(i.who);return ev(i,"l"+Math.min(Math.max(k,0),2),`<b>${esc(i.who)}</b><br>${esc(i.escort||"미정")}`)}).join("")
    +d.filter(i=>i.kind==="edu").sort((a,c)=>(a.time||"").localeCompare(c.time||"")).map(i=>ev(i,"edu",`${esc(i.time)}<br>${esc(i.title)}${i.lecturer?"<br>("+esc(i.lecturer)+")":""}`)).join("")
@@ -248,7 +242,7 @@ async function exportImg(b,mode){
 function regCal(l,b){
   const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
   const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=(new Date(y,m,1).getDay()+6)%7;
-  const ev=(i,cls)=>`<div class="ev w ${cls} s-${esc(i.status)}" data-ed="${i.id}" title="${esc(i.region)}">${esc(i.title)}${i.who?"<br>("+esc(i.who)+")":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
+  const ev=(i,cls)=>`<div class="ev w ${cls}" data-ed="${i.id}" title="${esc(i.region)}">${esc(i.title)}${i.who?"<br>("+esc(i.who)+")":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
   let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg"><div class="h">권역</div>${"월화수목금토일".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
   const row=(label,lc,reg,wd,cls)=>`<div class="lb ${lc}">${label}</div>`+wd.map(d=>d>=1&&d<=days
     ?`<div data-day="${ds(d)}" data-reg="${reg}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${l.filter(i=>i.date===ds(d)&&i.region===reg).map(i=>ev(i,cls)).join("")}</div>`:`<div></div>`).join("");
@@ -285,7 +279,7 @@ function openDlg(b,it,date,reg){
     $("#mTime").value=it?.time||"";$("#mTitle").value=it?.kind==="edu"?it.title:"";$("#mLect").value=it?.lecturer||"";
     $("#mEtc").value=it&&it.kind!=="escort"&&it.kind!=="edu"?it.title:"";showGrp();
   }
-  $("#dlgTitle").textContent=(it?"일정 수정":"일정 추가")+" · "+b.name;
+  $("#dlgTitle").textContent=(it?"일정 수정":"일정 추가")+" · "+b.name;$("#fDel").hidden=!it;
   $("#fWhoL").textContent=b.who;
   $("#fDate").value=it?.date||date||today();$("#fTitle").value=it?.title||"";
   $("#fWho").value=it?.who||"";
@@ -295,6 +289,7 @@ function openDlg(b,it,date,reg){
 function showGrp(){["escort","edu","etc"].forEach(k=>$("#g-"+k).classList.toggle("on",$("#mKind").value===k))}
 $("#mKind").onchange=showGrp;
 $("#fCancel").onclick=()=>$("#dlg").close();
+$("#fDel").onclick=async()=>{if(!editing||!editing.id||!confirm("이 일정을 삭제할까요?\n삭제하면 되돌릴 수 없습니다."))return;await remove(editing.id);$("#dlg").close()};
 $("#fSave").onclick=async()=>{
   if(dlgB?.lanes){
     const k=$("#mKind").value,d=$("#fDate").value;if(!d)return;
