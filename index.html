@@ -127,7 +127,7 @@ dialog label{display:block;margin:10px 0 4px;font-size:12px;color:var(--mute)}
   <div id="gen">
   <div id="regRow" style="display:none"><label>권역</label><select id="fReg"></select></div>
   <label>일정/교육 내용</label><input id="fTitle" placeholder="예: 고객 응대 롤플레이">
-  <label id="fWhoL">담당자</label><input id="fWho">
+  <label id="fWhoL">담당자</label><input id="fWho"><datalist id="dlWho"></datalist>
   <div id="extra"></div>
   </div>
   <div id="mgrf" style="display:none">
@@ -152,9 +152,9 @@ const STAT=["예정","진행중","완료"];
 let items=[],settings={},cur="home",editing=null,dlgB=null,calMonth=new Date(),filter="";
 const ymKey=()=>`${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,"0")}`;
 const L=i=>i.kind==="escort"?`${i.who} ← 동행 ${i.escort||"미정"}`:i.kind==="edu"?`${i.time?i.time+" ":""}${i.title}${i.lecturer?" ("+i.lecturer+")":""}`:i.title;
-function trainees(){
-  const s=settings["mgr-"+ymKey()]?.trainees;if(s&&s.length)return s;
-  return [...new Set(items.filter(i=>i.board==="mgr"&&i.kind==="escort"&&(i.date||"").startsWith(ymKey())).map(i=>i.who))].sort((a,b)=>a.localeCompare(b,"ko"));
+function trainees(bid="mgr"){
+  const s=settings[bid+"-"+ymKey()]?.trainees;if(s&&s.length)return s;
+  return [...new Set(items.filter(i=>i.board===bid&&(bid!=="mgr"||i.kind==="escort")&&(i.date||"").startsWith(ymKey())).map(i=>i.who).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
 }
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -186,7 +186,7 @@ function renderBoard(b){
   let h=`<div class="toolbar"><button class="btn" id="add">＋ 일정 추가</button>
     <select id="flt" style="width:auto"><option value="">${b.regions?"전체 권역":"전체 "+b.who}</option>${whos.map(w=>`<option ${w===filter?"selected":""}>${esc(w)}</option>`).join("")}</select>
     <span class="sp"></span></div>`;
-  if(b.lanes)h+=`<div class="card trn" style="margin-bottom:14px"><b>👥 ${calMonth.getMonth()+1}월 신입지점장</b><input id="trnIn" value="${esc(trainees().join(", "))}" placeholder="이름을 쉼표(,)로 구분"><button class="btn" id="trnSave">대상자 저장</button><span class="mute">달마다 따로 저장됩니다. 달력의 칸 구분(색)이 이 순서를 따릅니다.</span></div>`;
+  if(b.lanes||b.id==="stf")h+=`<div class="card trn" style="margin-bottom:14px"><b>👥 ${calMonth.getMonth()+1}월 ${esc(b.who)}</b><input id="trnIn" value="${esc(trainees(b.id).join(", "))}" placeholder="이름을 쉼표(,)로 구분"><button class="btn" id="trnSave">대상자 저장</button><span class="mute">달마다 따로 저장됩니다. 달력의 ${b.lanes?"칸 구분(색)이":"줄 이름이"} 이 순서를 따릅니다.</span></div>`;
   if(b.regions)h+=`<div class="legend" style="margin-bottom:8px"><span style="background:#fff4b8">대전권</span><span style="background:#d9f0d0">청주권</span><span style="background:#bfe6f7">천안권</span><span style="background:#fde3e3;color:#c00">전체(공통)</span></div>`;
   if(b.calendar) h+=calendar(l,b);
   $("#main").innerHTML=h;
@@ -276,7 +276,7 @@ function whoCal(l,b){
   const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,ym=`${y}-${pad(m+1)}`;
   const ym0=`${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,"0")}`,we=l.some(i=>(i.date||"").startsWith(ym0)&&[0,6].includes(new Date(i.date+"T00:00").getDay())),nd=we?7:5;const off=we?new Date(y,m,1).getDay():(new Date(y,m,1).getDay()+6)%7;
   const mon=l.filter(i=>(i.date||"").startsWith(ym));
-  const names=[...new Set(mon.map(i=>i.who||"").filter(Boolean))].sort((a,z)=>a.localeCompare(z,"ko"));
+  const tl=trainees("stf"),names=tl.concat([...new Set(mon.map(i=>i.who||"").filter(Boolean))].filter(n=>!tl.includes(n)).sort((a,z)=>a.localeCompare(z,"ko")));
   const rows=names.concat(mon.some(i=>!i.who)||!names.length?[""]:[]);
   const ev=(i,k)=>`<div class="ev w l${k%3}" data-ed="${i.id}">${esc(i.title)}${i.branch?"<br><small>지점 "+esc(i.branch)+"</small>":""}${i.trainer?"<br><small>담당 "+esc(i.trainer)+"</small>":""}${i.escort?"<br><small>동반 "+esc(i.escort)+"</small>":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
   let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg${we?" sun":" wk5"}"><div class="h">${esc(b.who)}</div>${(we?"일월화수목금토":"월화수목금").split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
@@ -316,7 +316,7 @@ function openDlg(b,it,date,reg){
     showGrp();
   }
   $("#dlgTitle").textContent=(it?"일정 수정":"일정 추가")+" · "+b.name;$("#fDel").hidden=!it;
-  $("#fWhoL").textContent=b.who;
+  $("#fWhoL").textContent=b.who;$("#dlWho").innerHTML=b.id==="stf"?trainees("stf").map(n=>`<option value="${esc(n)}">`).join(""):"";if(b.id==="stf")$("#fWho").setAttribute("list","dlWho");else $("#fWho").removeAttribute("list");
   $("#fDate").value=it?.date||date||today();$("#fTitle").value=it?.title||"";
   $("#fWho").value=it?.who||(!it&&reg&&!b.regions&&!b.lanes?reg:"");
   $("#extra").innerHTML=(b.extra||[]).map(x=>`<label>${x.l}</label><input data-x="${x.k}" value="${esc(it?.[x.k]||"")}">`).join("");$("#fStatus").value=it?.status||"예정";$("#fMemo").value=it?.memo||"";
@@ -363,7 +363,7 @@ async function remove(id){
   if(error){$("#status").textContent="(삭제 실패: "+error.message+")";load()}
 }
 async function saveTrainees(t){
-  const id="mgr-"+ymKey();
+  const id=cur+"-"+ymKey();
   settings[id]={id,trainees:t};render();
   const {error}=await sb.from("settings").upsert({id,trainees:t});
   if(error){$("#status").textContent="(저장 실패: "+error.message+")";load()}
