@@ -26,7 +26,7 @@ header p{margin:4px 0 0;color:#cfcfcf;font-size:13px}
 nav{display:flex;gap:6px;padding:14px 24px 0;background:#fff;border-bottom:3px solid var(--pri);overflow-x:auto}
 nav button{border:1px solid var(--line);border-bottom:0;background:#f0efec;border-radius:8px 8px 0 0;padding:9px 20px;font-size:15px;cursor:pointer;color:var(--mute);white-space:nowrap;font-family:inherit;font-weight:700;margin-bottom:-3px}
 nav button.on{background:#fff;color:var(--pri);border-color:var(--pri);border-bottom:3px solid #fff}
-main{max-width:1000px;margin:0 auto;padding:20px 24px 60px}
+main{max-width:1680px;margin:0 auto;padding:20px 24px 60px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .hubcard{cursor:pointer}.hubcard:hover,.card[onclick]:hover{border-color:var(--pri)}
@@ -54,16 +54,16 @@ select,input,textarea{font-family:inherit;font-size:13px;padding:7px 9px;border:
 .cal .ev{background:#e8eefc;color:#1e3fa8;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 
 .cal .ev.w{white-space:normal;line-height:1.3}
-.cal .ev.l0{background:#dce6f2;color:#1b3a63}.cal .ev.l1{background:#e3efd3;color:#2d5a14}.cal .ev.l2{background:#f3e1f5;color:#5d2a66}
+.cal .ev{min-height:0}.cal .lanes{min-height:0;padding:0;display:grid;gap:3px;margin-top:2px;align-items:start}.cal .lanes .ev{margin-top:0;word-break:keep-all;overflow-wrap:break-word}.cal .ev.l0{background:#dce6f2;color:#1b3a63}.cal .ev.l1{background:#e3efd3;color:#2d5a14}.cal .ev.l2{background:#f3e1f5;color:#5d2a66}
 .cal .ev.edu{background:#fff4b8;color:#5c4a00;border-top:1px dashed #c9b84a}
 .cal .ev.r0{background:#fff4b8;color:#5c4a00}.cal .ev.r1{background:#d9f0d0;color:#25561a}.cal .ev.r2{background:#bfe6f7;color:#0d4a68}
 .cal .ev.rall{background:#fde3e3;color:#c00;font-weight:700;text-align:center;padding:8px 4px}
 .cal.rg{grid-template-columns:70px repeat(5,1fr) .5fr .5fr}
-.cal.rg div{min-height:44px}
+.cal.rg.sun{grid-template-columns:70px .5fr repeat(5,1fr) .5fr}.cal.rg div{min-height:44px}
 .cal.rg .ev{min-height:0}
 .cal.rg .dh{background:#f0f2f5;font-weight:700;min-height:0;padding:3px 6px}
 .cal.rg .lb{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
-.cal.rg .lb.r0{background:#ffe94d}.cal.rg .lb.r1{background:#8fdc8a}.cal.rg .lb.r2{background:#63c7f0}.cal.rg .lb.lrall{background:#fde3e3;color:#c00}
+.cal.rg .lb.l0{background:#dce6f2}.cal.rg .lb.l1{background:#e3efd3}.cal.rg .lb.l2{background:#f3e1f5}.cal.rg .lb.ledu{background:#fff4b8}.cal.rg .ev{white-space:normal}.cal.rg .lb.r0{background:#ffe94d}.cal.rg .lb.r1{background:#8fdc8a}.cal.rg .lb.r2{background:#63c7f0}.cal.rg .lb.lrall{background:#fde3e3;color:#c00}
 #login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:50}
 .legend{display:flex;gap:6px;font-size:11px}.legend span{padding:2px 8px;border-radius:99px}
 .cal .ev.etc{background:#fde3e3;color:#c00;text-align:center}
@@ -213,10 +213,11 @@ function dayHtml(l,ds,b){
   if(!b.lanes)return d.map(i=>`<div class="ev" data-ed="${i.id}" title="${esc(i.who)} ${esc(i.title)}${i.branch?" / 지점 "+esc(i.branch):""}${i.trainer?" / 교육담당 "+esc(i.trainer):""}${i.escort?" / 동반 "+esc(i.escort):""}">${i.who?"["+esc(i.who)+"] ":""}${esc(i.title)}</div>`).join("");
   const tr=trainees(),ev=(i,c,t)=>`<div class="ev w ${c}" data-ed="${i.id}">${t}</div>`;
   const esc_=d.filter(i=>i.kind==="escort").sort((a,c)=>tr.indexOf(a.who)-tr.indexOf(c.who));
-  return esc_.map(i=>{const k=tr.indexOf(i.who);return ev(i,"l"+Math.min(Math.max(k,0),2),`<b>${esc(i.who)}</b><br>${esc(i.escort||"미정")}`)}).join("")
-   +d.filter(i=>i.kind==="edu").sort((a,c)=>(a.time||"").localeCompare(c.time||"")).map(i=>ev(i,"edu",`${esc(i.time)}<br>${esc(i.title)}${i.lecturer?"<br>("+esc(i.lecturer)+")":""}`)).join("")
-   +d.filter(i=>i.kind!=="escort"&&i.kind!=="edu").map(i=>ev(i,"etc",esc(i.title||""))).join("");
-}
+  const nt=Math.min(Math.max(tr.length,1),3),cols=nt+1,full=h=>h.replace('<div class="ev ','<div style="grid-column:1/-1" class="ev ');
+  const inner=esc_.map(i=>{const k=Math.min(Math.max(tr.indexOf(i.who),0),2);return ev(i,"l"+k,`<b>${esc(i.who)}</b><br>${esc(i.escort||"미정")}`).replace('<div class="ev ',`<div style="grid-column:${Math.min(k+1,nt)}" class="ev `)}).join("")
+   +d.filter(i=>i.kind==="edu").sort((a,c)=>(a.time||"").localeCompare(c.time||"")).map(i=>ev(i,"edu",`${esc(i.time)}<br>${esc(i.title)}${i.lecturer?"<br>("+esc(i.lecturer)+")":""}`).replace('<div class="ev ',`<div style="grid-column:${cols}" class="ev `)).join("")
+   +d.filter(i=>i.kind!=="escort"&&i.kind!=="edu").map(i=>full(ev(i,"etc",esc(i.title||"")))).join("");
+  return inner?`<div class="lanes" style="grid-template-columns:repeat(${cols},1fr)">${inner}</div>`:"";}
 function calBar(b,y,m){
   return `<div class="toolbar"><button class="btn ghost" data-cal="-1" data-html2canvas-ignore>◀</button><b>${esc(b.name)} · ${y}년 ${m+1}월</b><button class="btn ghost" data-cal="1" data-html2canvas-ignore>▶</button>
   <span class="sp"></span><span data-html2canvas-ignore style="display:flex;gap:6px"><button class="btn ghost" data-img="save">🖼 이미지 저장</button><button class="btn ghost" data-img="copy">📋 이미지 복사</button></span></div>`;
@@ -254,9 +255,41 @@ function regCal(l,b){
   }
   return c+`</div></div>`;
 }
-function calendar(l,b){
-  if(b.regions)return regCal(l,b);
-  const y=calMonth.getFullYear(),m=calMonth.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+function laneCal(l,b){
+  const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
+  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=new Date(y,m,1).getDay(),tr=trainees();
+  const ev=(i,cls,h)=>`<div class="ev w ${cls}" data-ed="${i.id}">${h}</div>`;
+  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg sun"><div class="h">구분</div>${"일월화수목금토".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
+  const row=(label,lc,key,wd,f)=>`<div class="lb ${lc}">${label}</div>`+wd.map(d=>d>=1&&d<=days
+    ?`<div data-day="${ds(d)}" data-reg="${esc(key)}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${f(l.filter(i=>i.date===ds(d)))}</div>`:`<div></div>`).join("");
+  for(let w0=1-off;w0<=days;w0+=7){
+    const wd=[0,1,2,3,4,5,6].map(k=>w0+k);
+    c+=`<div class="dh"></div>`+wd.map(d=>`<div class="dh">${d>=1&&d<=days?d:""}</div>`).join("");
+    tr.forEach((n,k)=>{c+=row(esc(n),"l"+Math.min(k,2),n,wd,d=>d.filter(i=>i.kind==="escort"&&i.who===n).map(i=>ev(i,"l"+Math.min(k,2),esc(i.escort||"미정")+(i.memo?"<br><small>"+esc(i.memo)+"</small>":""))).join(""))});
+    c+=row("교육","ledu","__edu",wd,d=>d.filter(i=>i.kind==="edu").sort((a,z)=>(a.time||"").localeCompare(z.time||"")).map(i=>ev(i,"edu",`${esc(i.time)} ${esc(i.title)}${i.lecturer?" ("+esc(i.lecturer)+")":""}`)).join(""));
+    if(l.some(i=>i.kind!=="escort"&&i.kind!=="edu"&&wd.some(d=>d>=1&&d<=days&&i.date===ds(d))))c+=row("기타","lrall","__etc",wd,d=>d.filter(i=>i.kind!=="escort"&&i.kind!=="edu").map(i=>ev(i,"etc",esc(i.title||""))).join(""));
+  }
+  return c+`</div></div>`;
+}
+function whoCal(l,b){
+  const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
+  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=new Date(y,m,1).getDay(),ym=`${y}-${pad(m+1)}`;
+  const mon=l.filter(i=>(i.date||"").startsWith(ym));
+  const names=[...new Set(mon.map(i=>i.who||"").filter(Boolean))].sort((a,z)=>a.localeCompare(z,"ko"));
+  const rows=names.concat(mon.some(i=>!i.who)||!names.length?[""]:[]);
+  const ev=(i,k)=>`<div class="ev w l${k%3}" data-ed="${i.id}">${esc(i.title)}${i.branch?"<br><small>지점 "+esc(i.branch)+"</small>":""}${i.trainer?"<br><small>담당 "+esc(i.trainer)+"</small>":""}${i.escort?"<br><small>동반 "+esc(i.escort)+"</small>":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
+  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg sun"><div class="h">${esc(b.who)}</div>${"일월화수목금토".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
+  for(let w0=1-off;w0<=days;w0+=7){
+    const wd=[0,1,2,3,4,5,6].map(k=>w0+k);
+    c+=`<div class="dh"></div>`+wd.map(d=>`<div class="dh">${d>=1&&d<=days?d:""}</div>`).join("");
+    rows.forEach((n,k)=>{c+=`<div class="lb l${k%3}">${esc(n||"공통")}</div>`+wd.map(d=>d>=1&&d<=days
+      ?`<div data-day="${ds(d)}" data-reg="${esc(n)}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${l.filter(i=>i.date===ds(d)&&(i.who||"")===n).map(i=>ev(i,k)).join("")}</div>`:`<div></div>`).join("")});
+  }
+  return c+`</div></div>`;
+}
+function calendar(l,b){  if(b.regions)return regCal(l,b);
+  if(b.lanes)return laneCal(l,b);
+  if(b.id=="stf")return whoCal(l,b);  const y=calMonth.getFullYear(),m=calMonth.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
   let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal">`;
   "일월화수목금토".split("").forEach(d=>c+=`<div class="h">${d}</div>`);
   for(let i=0;i<first;i++)c+=`<div></div>`;
@@ -277,12 +310,14 @@ function openDlg(b,it,date,reg){
     $("#mWho").innerHTML=tr.map(t=>`<option>${esc(t)}</option>`).join("");
     $("#mKind").value=it?.kind||"escort";$("#mWho").value=it?.who||tr[0]||"";$("#mEscort").value=it?.escort||"";
     $("#mTime").value=it?.time||"";$("#mTitle").value=it?.kind==="edu"?it.title:"";$("#mLect").value=it?.lecturer||"";
-    $("#mEtc").value=it&&it.kind!=="escort"&&it.kind!=="edu"?it.title:"";showGrp();
+    $("#mEtc").value=it&&it.kind!=="escort"&&it.kind!=="edu"?it.title:"";
+    if(!it&&reg){if(reg==="__edu")$("#mKind").value="edu";else if(reg==="__etc")$("#mKind").value="etc";else if(tr.includes(reg))$("#mWho").value=reg}
+    showGrp();
   }
   $("#dlgTitle").textContent=(it?"일정 수정":"일정 추가")+" · "+b.name;$("#fDel").hidden=!it;
   $("#fWhoL").textContent=b.who;
   $("#fDate").value=it?.date||date||today();$("#fTitle").value=it?.title||"";
-  $("#fWho").value=it?.who||"";
+  $("#fWho").value=it?.who||(!it&&reg&&!b.regions&&!b.lanes?reg:"");
   $("#extra").innerHTML=(b.extra||[]).map(x=>`<label>${x.l}</label><input data-x="${x.k}" value="${esc(it?.[x.k]||"")}">`).join("");$("#fStatus").value=it?.status||"예정";$("#fMemo").value=it?.memo||"";
   $("#dlg").showModal();
 }
