@@ -59,7 +59,7 @@ select,input,textarea{font-family:inherit;font-size:13px;padding:7px 9px;border:
 .cal .ev.r0{background:#fff4b8;color:#5c4a00}.cal .ev.r1{background:#d9f0d0;color:#25561a}.cal .ev.r2{background:#bfe6f7;color:#0d4a68}
 .cal .ev.rall{background:#fde3e3;color:#c00;font-weight:700;text-align:center;padding:8px 4px}
 .cal.rg{grid-template-columns:70px repeat(5,1fr) .5fr .5fr}
-.cal.rg.sun{grid-template-columns:70px .5fr repeat(5,1fr) .5fr}.cal.rg div{min-height:44px}
+.cal.rg.wk5{grid-template-columns:70px repeat(5,1fr)}.cal.rg.sun{grid-template-columns:70px .5fr repeat(5,1fr) .5fr}.cal.rg div{min-height:44px}
 .cal.rg .ev{min-height:0}
 .cal.rg .dh{background:#f0f2f5;font-weight:700;min-height:0;padding:3px 6px}
 .cal.rg .lb{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
@@ -242,13 +242,13 @@ async function exportImg(b,mode){
 }
 function regCal(l,b){
   const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
-  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=(new Date(y,m,1).getDay()+6)%7;
+  const ym0=`${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,"0")}`,we=l.some(i=>(i.date||"").startsWith(ym0)&&[0,6].includes(new Date(i.date+"T00:00").getDay())),nd=we?7:5;const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=(new Date(y,m,1).getDay()+6)%7;
   const ev=(i,cls)=>`<div class="ev w ${cls}" data-ed="${i.id}" title="${esc(i.region)}">${esc(i.title)}${i.who?"<br>("+esc(i.who)+")":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
-  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg"><div class="h">권역</div>${"월화수목금토일".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
+  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg${we?"":" wk5"}"><div class="h">권역</div>${"월화수목금토일".slice(0,nd).split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
   const row=(label,lc,reg,wd,cls)=>`<div class="lb ${lc}">${label}</div>`+wd.map(d=>d>=1&&d<=days
     ?`<div data-day="${ds(d)}" data-reg="${reg}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${l.filter(i=>i.date===ds(d)&&i.region===reg).map(i=>ev(i,cls)).join("")}</div>`:`<div></div>`).join("");
   for(let w0=1-off;w0<=days;w0+=7){
-    const wd=[0,1,2,3,4,5,6].map(k=>w0+k);
+    const wd=[...Array(nd).keys()].map(k=>w0+k);if(!wd.some(d=>d>=1&&d<=days))continue;
     c+=`<div class="dh"></div>`+wd.map(d=>`<div class="dh">${d>=1&&d<=days?d:""}</div>`).join("");
     if(l.some(i=>i.region==="전체"&&wd.some(d=>d>=1&&d<=days&&i.date===ds(d))))c+=row("전체","lrall","전체",wd,"rall");
     b.regions.forEach((r,k)=>{if(!filter||filter===r)c+=row(r,"r"+k,r,wd,"r"+k)});
@@ -257,13 +257,13 @@ function regCal(l,b){
 }
 function laneCal(l,b){
   const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
-  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=new Date(y,m,1).getDay(),tr=trainees();
+  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`;const ym0=`${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,"0")}`,we=l.some(i=>(i.date||"").startsWith(ym0)&&[0,6].includes(new Date(i.date+"T00:00").getDay())),nd=we?7:5;const off=we?new Date(y,m,1).getDay():(new Date(y,m,1).getDay()+6)%7,tr=trainees();
   const ev=(i,cls,h)=>`<div class="ev w ${cls}" data-ed="${i.id}">${h}</div>`;
-  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg sun"><div class="h">구분</div>${"일월화수목금토".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
+  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg${we?" sun":" wk5"}"><div class="h">구분</div>${(we?"일월화수목금토":"월화수목금").split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
   const row=(label,lc,key,wd,f)=>`<div class="lb ${lc}">${label}</div>`+wd.map(d=>d>=1&&d<=days
     ?`<div data-day="${ds(d)}" data-reg="${esc(key)}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${f(l.filter(i=>i.date===ds(d)))}</div>`:`<div></div>`).join("");
   for(let w0=1-off;w0<=days;w0+=7){
-    const wd=[0,1,2,3,4,5,6].map(k=>w0+k);
+    const wd=[...Array(nd).keys()].map(k=>w0+k);if(!wd.some(d=>d>=1&&d<=days))continue;
     c+=`<div class="dh"></div>`+wd.map(d=>`<div class="dh">${d>=1&&d<=days?d:""}</div>`).join("");
     tr.forEach((n,k)=>{c+=row(esc(n),"l"+Math.min(k,2),n,wd,d=>d.filter(i=>i.kind==="escort"&&i.who===n).map(i=>ev(i,"l"+Math.min(k,2),esc(i.escort||"미정")+(i.memo?"<br><small>"+esc(i.memo)+"</small>":""))).join(""))});
     c+=row("교육","ledu","__edu",wd,d=>d.filter(i=>i.kind==="edu").sort((a,z)=>(a.time||"").localeCompare(z.time||"")).map(i=>ev(i,"edu",`${esc(i.time)} ${esc(i.title)}${i.lecturer?" ("+esc(i.lecturer)+")":""}`)).join(""));
@@ -273,14 +273,15 @@ function laneCal(l,b){
 }
 function whoCal(l,b){
   const y=calMonth.getFullYear(),m=calMonth.getMonth(),days=new Date(y,m+1,0).getDate(),pad=n=>String(n).padStart(2,"0");
-  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,off=new Date(y,m,1).getDay(),ym=`${y}-${pad(m+1)}`;
+  const ds=d=>`${y}-${pad(m+1)}-${pad(d)}`,ym=`${y}-${pad(m+1)}`;
+  const ym0=`${calMonth.getFullYear()}-${String(calMonth.getMonth()+1).padStart(2,"0")}`,we=l.some(i=>(i.date||"").startsWith(ym0)&&[0,6].includes(new Date(i.date+"T00:00").getDay())),nd=we?7:5;const off=we?new Date(y,m,1).getDay():(new Date(y,m,1).getDay()+6)%7;
   const mon=l.filter(i=>(i.date||"").startsWith(ym));
   const names=[...new Set(mon.map(i=>i.who||"").filter(Boolean))].sort((a,z)=>a.localeCompare(z,"ko"));
   const rows=names.concat(mon.some(i=>!i.who)||!names.length?[""]:[]);
   const ev=(i,k)=>`<div class="ev w l${k%3}" data-ed="${i.id}">${esc(i.title)}${i.branch?"<br><small>지점 "+esc(i.branch)+"</small>":""}${i.trainer?"<br><small>담당 "+esc(i.trainer)+"</small>":""}${i.escort?"<br><small>동반 "+esc(i.escort)+"</small>":""}${i.memo?"<br><small>"+esc(i.memo)+"</small>":""}</div>`;
-  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg sun"><div class="h">${esc(b.who)}</div>${"일월화수목금토".split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
+  let c=`<div class="card" id="calCard">${calBar(b,y,m)}<div class="cal rg${we?" sun":" wk5"}"><div class="h">${esc(b.who)}</div>${(we?"일월화수목금토":"월화수목금").split("").map(d=>`<div class="h">${d}</div>`).join("")}`;
   for(let w0=1-off;w0<=days;w0+=7){
-    const wd=[0,1,2,3,4,5,6].map(k=>w0+k);
+    const wd=[...Array(nd).keys()].map(k=>w0+k);if(!wd.some(d=>d>=1&&d<=days))continue;
     c+=`<div class="dh"></div>`+wd.map(d=>`<div class="dh">${d>=1&&d<=days?d:""}</div>`).join("");
     rows.forEach((n,k)=>{c+=`<div class="lb l${k%3}">${esc(n||"공통")}</div>`+wd.map(d=>d>=1&&d<=days
       ?`<div data-day="${ds(d)}" data-reg="${esc(n)}" style="cursor:pointer${ds(d)===today()?";background:#fffbe6":""}">${l.filter(i=>i.date===ds(d)&&(i.who||"")===n).map(i=>ev(i,k)).join("")}</div>`:`<div></div>`).join("")});
